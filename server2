@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+
+# Echo server program
+import socket
+import time
+
+HOST = ''                 # Symbolic name meaning the local host
+PORT = int(raw_input("Please enter a port number that you want to connect to: "))              # Arbitrary non-privileged port
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((HOST, PORT))
+s.listen(1)
+
+print ("Server Started")
+
+conn, addr = s.accept()
+print ('Connected by', addr)
+
+"""
+To measure RTT, 
+send and receive messages of size 1, 100, 200, 400, 800 and 1000 bytes. 
+
+To measure throughput,
+send and receive messages of size 1K, 2K, 4K, 8K, 16K and 32K bytes.
+
+s.send('s rtt 10 1 0\n')
+
+
+"""
+
+data = conn.recv(1024)
+while data[-1] != "\n":
+    data += conn.recv(1024)
+# data should be PP + WS + MT + WS + NOP + WS + MS + WS+ SD +'\n'
+dataList = data.split()
+if dataList[0] == "s" and (dataList[1] == "rtt" or dataList[1] == "tput"):
+        try:
+            NOP = eval(dataList[2])
+            MS = eval(dataList[3])
+            SD = eval(dataList[4]) # in ms
+        except:
+            conn.send("404 ERROR: Invalid Connection Setup Message\n")
+            conn.close()
+        if conn: # if its still connected/ no errors
+            conn.send("200 OK: Ready\n")
+            #data2 = conn.recv(64000)
+            for x in range(1, NOP+1):
+                dataX = conn.recv(64000)
+                while dataX[-1] != "\n":
+                    dataX += conn.recv(64000)
+                print "Data received"
+                dataXList = dataX.split()
+                #print "KANKANKAN", dataXList
+            	# data2List should be PP + WS + PSN + WS + PL + '\n'
+            	# check PROB MESSAGE
+                receivedPSN = int(dataXList[1])
+                receivedPL = dataXList[2]
+                # check PP and PSN length
+                if dataXList[0] != 'm':
+                    onn.send("404 ERROR: Invalid Measurement Message\n")
+                    #print "m close"
+                    conn.close()
+                # check if PSN is increasing
+                if receivedPSN != x:
+                    conn.send("404 ERROR: Invalid Measurement Message\n")
+                    #print "x close"
+                    conn.close()
+                if conn: # if its still connected
+                    # prob message
+                    PM = dataX
+                    time.sleep(SD/1000.0)
+                    conn.send(PM)
+                    # connection termination phase
+        data3 = conn.recv(1024)
+        if data3 == 't\n':
+            conn.send("200 OK: Closing Connection\n")
+            print "Let close."
+        else:
+            conn.send("404 ERROR: Invalid Connection Termination Message\n")
+            print "Invalid connection. Closing."
+        conn.close()
+else:
+    conn.send("404 ERROR: Invalid Connection Setup Message\n")
+    conn.close()
